@@ -1,6 +1,28 @@
 #!/usr/bin/env python3
 
-'''Universe mapping tool for Naev.'''
+'''Universe mapping tool for Naev.
+
+Run this script from the root directory of your Naev source tree. It
+reads the XML files in dat/ssys/ and outputs an SVG map to standard
+output. Example usage:
+    user@home:~/naev/$ jumpmap > map.svg
+
+'''
+
+# Copyright © 2012 Tim Pederick.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import date
 import glob
