@@ -24,59 +24,13 @@ output. Example usage:
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Standard library imports.
 from datetime import date
 import glob
 import os
-import xml.dom.minidom
 
-elemtext = lambda elem: ''.join(c.data for c in elem.childNodes
-                                if c.nodeType == c.TEXT_NODE)
-
-class SSystem:
-    def __init__(self, filename):
-        with open(filename) as f:
-            doc = xml.dom.minidom.parse(f)
-            self.name = doc.documentElement.getAttribute('name')
-
-            # Extract the <general> information.
-            for child in doc.getElementsByTagName('general')[0].childNodes:
-                # We're only interested in child elements.
-                if child.nodeType != child.ELEMENT_NODE:
-                    continue
-
-                value = elemtext(child)
-                if child.tagName == 'nebula':
-                    # The <nebula> tag has a couple of bits of info.
-                    self.nebula = (float(value),
-                                   float(child.getAttribute('volatility')))
-                else:
-                    # Everything else is just a single piece of content.
-                    self.__setattr__(child.tagName,
-                                     int(value) if child.tagName == 'stars'
-                                     else float(value))
-
-            # Extract the system's position.
-            pos = doc.getElementsByTagName('pos')[0]
-            self.pos = (float(elemtext(pos.getElementsByTagName('x')[0])),
-                        float(elemtext(pos.getElementsByTagName('y')[0])))
-
-            # Extract the system's assets (planets and stations and such).
-            self.assets = tuple(elemtext(asset)
-                                for asset in doc.getElementsByTagName('asset'))
-
-            # Extract the jump points out of this system.
-            self.jumps = {}
-            for jump in doc.getElementsByTagName('jump'):
-                autopos = jump.getElementsByTagName('autopos')
-                exit_only = jump.getElementsByTagName('exitonly')
-                pos = jump.getElementsByTagName('pos')
-                jump_pos = ((None, None) if autopos
-                            else (pos[0].getAttribute('x'),
-                                  pos[0].getAttribute('y')))
-                hide = float(elemtext(jump.getElementsByTagName('hide')[0]))
-
-                self.jumps[jump.getAttribute('target')] = (jump_pos, hide,
-                                                           bool(exit_only))
+# Local imports.
+from naevdata import SSystem
 
 def mapdata(ssystems):
     '''Extract mappable data from a list of star systems.'''
@@ -90,14 +44,15 @@ def mapdata(ssystems):
     for ssys in ssystems:
         # Note down the system name and location.
         syslocs[ssys.name] = ssys.pos
-        # Note down any jumps it has.
+        # Note down any jumps it has. Ignore any that can't be entered from
+        # here; they'll be recorded in the system at the other end.
         jumps_by_name[ssys.name] = list(dest for dest in ssys.jumps
-                                        if not ssys.jumps[dest][2])
+                                        if not ssys.jumps[dest].exit_only)
         # Track the outermost systems.
-        xmin = min(xmin, ssys.pos[0])
-        xmax = max(xmax, ssys.pos[0])
-        ymin = min(ymin, ssys.pos[1])
-        ymax = max(ymax, ssys.pos[1])
+        xmin = min(xmin, ssys.pos.x)
+        xmax = max(xmax, ssys.pos.x)
+        ymin = min(ymin, ssys.pos.y)
+        ymax = max(ymax, ssys.pos.y)
 
     # Convert the jump data to a series of coordinates.
     for origin in jumps_by_name:
@@ -113,7 +68,7 @@ def mapdata(ssystems):
 
     return ((xmin, xmax, ymin, ymax), syslocs, jumps, jumps_oneway)
 
-def makemap(ssystems, margin=5, sys_size=5, ssystem_colour="orange",
+def makemap(ssystems, margin=10, sys_size=5, ssystem_colour="orange",
             jump_colour="grey", label_colour="black", label_font="serif"):
     (xmin, xmax, ymin, ymax), systems, jumps, jumps_oneway = mapdata(ssystems)
     # Pad the bounds of the map and convert to SVG viewBox specs.
@@ -153,21 +108,22 @@ def makemap(ssystems, margin=5, sys_size=5, ssystem_colour="orange",
     # Output the jumps first, so they're underneath the system markers.
     print('<g id="jumps">')
     for jump in jumps:
-        print('    <path d="M{},{} {},{}"/>'.format(jump[0][0], -jump[0][1],
-                                                    jump[1][0], -jump[1][1]))
+        print('    <path d="M{},{} {},{}"/>'.format(jump[0].x, -jump[0].y,
+                                                    jump[1].x, -jump[1].y))
     for jump in jumps_oneway:
         print('    <path class="oneway"')
         print('          d="M{0},{1} l{2},{3} {2},{3}"'
-              '/>'.format(jump[0][0], -jump[0][1],
-                          (jump[1][0] - jump[0][0]) // 2,
-                          -(jump[1][1] - jump[0][1]) // 2))
+              '/>'.format(jump[0].x,
+                          -jump[0].y,
+                          (jump[1].x - jump[0].x) // 2,
+                          -(jump[1].y - jump[0].y) // 2))
     print('</g>')
     print()
 
     # Output the system markers.
     print('<g id="systems">')
     for name in systems:
-        x, y = systems[name]
+        x, y = systems[name].coords
         print('    <circle cx="{}" cy="{}" r="{}"/>'.format(x, -y, sys_size))
         
         print('    <text x="{}" y="{}" font-size="{}"'.format(x + 2 * sys_size,
@@ -189,7 +145,7 @@ def main():
 
     ssystems = []
     for ssysfile in glob.glob(os.path.join(ssys_dir, '*.xml')):
-        # Parse the XML file into a SSystem object.
+        # Parse each XML file into a SSystem object.
         ssystems.append(SSystem(ssysfile))
     makemap(ssystems)
 
