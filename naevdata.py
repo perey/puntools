@@ -19,11 +19,34 @@
 
 import xml.dom.minidom
 
+# Shortcut function to extract the text content from an element.
 nodetext = lambda elem: ''.join(c.data for c in elem.childNodes
                                 if c.nodeType == c.TEXT_NODE)
 
 class Coords:
+    '''Represents an x-y coordinate pair.
+
+    Instance attributes:
+        x, y -- The coordinate values.
+        coords -- A shorthand for both coordinates as a 2-tuple.
+
+    '''
     def __init__(self, x=None, y=None):
+        '''Extract x-y coordinates from their XML representation.
+
+        Naev XML data files represent coordinate pairs as a <pos>
+        element with <x> and <y> children. This data can be extracted
+        by passing the <pos> element. Alternatively, both the x and y
+        coordinates may be supplied directly.
+
+        If no arguments are supplied, the coordinates will both be None.
+
+        Positional arguments:
+            pos -- An XML element whose <x> and <y> children hold the
+                respective coordinate values; OR
+            x, y -- The coordinate values given directly.
+
+        '''
         if x is not None and y is None:
             # Just the one argument. Treat it as an XML element with <x> and
             # <y> children whose contents are the respective coordinates.
@@ -39,31 +62,108 @@ class Coords:
 
 
 class Jump(Coords):
+    '''Represents a jump point from one system to another.
+
+    Instance attributes:
+        x, y, coords -- The jump point position, inherited from Coords.
+        hide -- The "hide" value of this jump point, which controls its
+            visibility in-game.
+        exit_only -- Whether or not this jump point forbids entry.
+
+    '''
     def __init__(self, pos, hide=1.25, exit_only=False, dest='ignored'):
+        '''Construct the jump point.
+
+        Keyword arguments:
+            pos -- The location of this jump point, as an x-y coordinate
+                pair.
+            hide, exit_only -- As the instance attributes. If omitted,
+                they default to 1.25 and False, respectively.
+            dest -- This argument is not used and may be omitted.
+
+        '''
         super().__init__(*pos)
         self.hide = float(hide)
         self.exit_only = bool(exit_only)
 
 
 class Nebula:
+    '''Represents the nebula presence in a star system.
+
+    Instance attributes:
+        density -- The density of the nebula in this system.
+        volatility -- How damaging the nebula is to ships in the system.
+
+    '''
     def __init__(self, density=0.0, volatility=0.0):
+        '''Create the nebula presence data.
+
+        Keyword arguments:
+            density, volatility -- As the instance attributes. Both
+                will default to 0.0 if omitted.
+
+        '''
         self.density = float(density)
         self.volatility = float(volatility)
 
 
 class Presence:
+    '''Represents the faction holding a planet, station, or other asset.
+
+    Instance attributes:
+        faction -- The name of the faction whose presence is described.
+        value -- A numeric index indicating the magnitude or strength of
+            this faction's presence.
+        range_ -- How far the faction presence from this system will
+            spill out into neighbouring systems.
+
+    '''
     def __init__(self, faction=None, value=100.0, range_=0.0):
+        '''Create the faction presence data.
+
+        Keyword arguments:
+            faction, value, range_ -- As the instance attributes. All
+                arguments are optional, and default to None, 100.0, and
+                0.0, respectively.
+
+        '''
         self.faction = faction
         self.value = float(value)
         self.range = int(range_)
 
 
 class Services:
+    '''Represents the services available on a planet or station.
+
+    Instance attributes:
+        bar -- A string describing the local spaceport bar, or None if
+            no bar is present.
+        commodities -- A set of commodities available for trade at this
+            location, or None if commodity trading is not available.
+        land -- A string detailing landing permissions ('any' if landing
+            is unrestricted), or None if landing is not possible.
+        missions, outfits, refuel, shipyard -- Whether or not these
+            services (mission computer, ship outfitting, refuelling, and
+            buying and selling of ships) are available at this location.
+
+    '''
     def __init__(self, bar=None, commodity=None, land=None, missions=False,
                  outfits=False, refuel=False, shipyard=False):
+        '''Create the service availability data.
+
+        Keyword arguments:
+            bar, land -- As the instance attributes. Default to None.
+            commodity -- As the instance attribute commodities. The
+                argument name differs because it is "commodity" in the
+                XML files, but "commodities" is a more apt label for
+                what it represents. The default is None.
+            missions, outfits, refuel, shipyard -- As the instance
+                attributes. Default to False.
+
+        '''
         self.bar = bar # None, or a string describing the bar.
         # Note that the argument name is "commodity", to match the XML tag,
-        # but the object attribute is named "commodities".
+        # but the instance attribute is named "commodities".
         self.commodities = None if commodity is None else set(commodity)
         self.land = land # None, or a string detailing who can land.
         self.missions = bool(missions)
@@ -73,7 +173,43 @@ class Services:
 
 
 class Asset:
+    '''Represents a planet, moon, station, or virtual holding.
+
+    A "virtual" asset represents a faction's stake in a system without
+    being mapped to a physical location. All of the other asset types
+    represent a concrete holding of a faction -- or of no faction, in
+    the case of an unsettled world or abandoned station.
+
+    Instance attributes:
+        description -- A string describing the asset.
+        gfx -- A mapping object of graphics pertaining to this asset.
+            The values are image filenames, and the keys are the images'
+            purposes (e.g. "space" for the asset's appearance from
+            space, "exterior" for a panorama of the planet or station
+            upon landing).
+        hide -- A numeric value controlling the asset's visibility.
+        population -- The population of the asset.
+        pos -- The location of the asset. An instance of Coords.
+        presence -- The faction that holds this asset. An instance of
+            Presence.
+        services -- The services available at this location. An instance
+            of Services.
+        virtual -- Whether or not this asset is virtual, as described
+            above.
+        world_class -- A broad classification of this world's physical
+            characteristics. All stations are class 0, while planets
+            and moons have letter designations.
+
+    '''
     def __init__(self, filename):
+        '''Construct the asset from an XML file.
+
+        Keyword arguments:
+            filename -- The filename of the XML asset data. If None, a
+                virtual asset without any interesting attributes is
+                created.
+
+        '''
         if filename is None:
             # Create an empty, virtual asset.
             self.description = ''
@@ -190,7 +326,35 @@ class Asset:
 
 
 class SSystem:
+    '''Represents a star system.
+
+    Instance attributes:
+        assets -- A set of Asset instances present in this system.
+        interference -- The prevailing sensor interference from any
+            background radiation or nebula presence in this system.
+        jumps -- A mapping object pairing destination system names with
+            Jump instances. Note that the jump point coordinates may be
+            omitted if the jump is "autopositioned", meaning it is
+            located at a point calculated from the two systems' relative
+            positions in space.
+        name -- The name of this system.
+        nebula -- A Nebula instance for nebula presence in this system.
+        pos -- A Coords object giving this system's location in space.
+        radius -- The size of this system for the purposes of asset
+            placement, autopositioning jump points, and the in-game map.
+        stars -- The density of stars in this system's background.
+            TODO: Check this! It's just a guess.
+
+    '''
     def __init__(self, filename=None):
+        '''Construct the star system from an XML file.
+
+        Keyword arguments:
+            filename -- The filename of the XML system data. If omitted,
+                a zero-size system without any interesting attributes is
+                created.
+
+        '''
         if filename is None:
             # Create an empty star system.
             self.assets = set()
@@ -215,8 +379,7 @@ class SSystem:
 
                 # Get the system's position, assets (planets and stations and
                 # such), and jump points.
-                self.pos = Coords(nodetext(pos.getElementsByTagName('x')[0]),
-                                  nodetext(pos.getElementsByTagName('y')[0]))
+                self.pos = Coords(pos)
                 self.assets = set(nodetext(asset) for asset in assets)
 
                 self.jumps = {}

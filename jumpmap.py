@@ -28,12 +28,30 @@ output. Example usage:
 from datetime import date
 import glob
 import os
+import sys
 
 # Local imports.
 from naevdata import SSystem
 
 def mapdata(ssystems):
-    '''Extract mappable data from a list of star systems.'''
+    '''Extract mappable data from a list of star systems.
+
+    Keyword arguments:
+        ssystems -- A sequence object containing the star systems to be
+            mapped (instances of naevdata.SSystem).
+    Returns:
+        A 4-tuple containing:
+        * the map boundaries (a 4-tuple of x-minimum, x-maximum,
+          y-minimum and y-maximum)
+        * the system locations (a mapping object of system names to
+          coordinates, given as 2-tuple x-y pairs)
+        * the two-way jumps between systems (a sequence object of
+          2-tuples holding the coordinates of the two ends, themselves
+          given as 2-tuple x-y pairs)
+        * the one-way jumps between systems (as above, but note that
+          the two ends are ordered as origin then destination)
+
+    '''
     syslocs = {}
     jumps_by_name = {}
     jumps = []
@@ -69,7 +87,24 @@ def mapdata(ssystems):
     return ((xmin, xmax, ymin, ymax), syslocs, jumps, jumps_oneway)
 
 def makemap(ssystems, margin=10, sys_size=5, ssystem_colour="orange",
-            jump_colour="grey", label_colour="black", label_font="serif"):
+            jump_colour="grey", label_colour="black", label_font="serif",
+            file=sys.stdout):
+    '''Create an SVG map from a list of star systems.
+
+    Keyword arguments:
+        ssystems -- A sequence object containing the star systems to be
+            mapped (instances of naevdata.SSystem).
+        margin -- The margin width (in pixels) to put around the edges
+            of the map. The default value is 10.
+        sys_size -- The radius of the dot representing each star system.
+            The default is 5.
+        ssystem_colour, jump_colour, label_colour, label_font -- Control
+            the appearance of the SVG output. The default appearance has
+            orange star systems, grey jumps, and labels in black serif.
+        file -- A file-like object to output the SVG to. Defaults to
+            standard output.
+
+    '''
     (xmin, xmax, ymin, ymax), systems, jumps, jumps_oneway = mapdata(ssystems)
     # Pad the bounds of the map and convert to SVG viewBox specs.
     LABEL_SPACE = 200
@@ -81,67 +116,79 @@ def makemap(ssystems, margin=10, sys_size=5, ssystem_colour="orange",
     print('<?xml version="1.0"?>')
     print('<svg xmlns="http://www.w3.org/2000/svg" version="1.2" '
           'baseProfile="tiny" width="{2}px" height="{3}px" '
-          'viewBox="{0} {1} {2} {3}">'.format(*svg_bounds))
-    print('<title>Naev universe map {}</title>'.format(date.today()))
-    print('<!-- {} -->'.format((xmin, xmax, ymin, ymax)))
+          'viewBox="{0} {1} {2} {3}">'.format(*svg_bounds), file=file)
+    print('<title>Naev universe map {}</title>'.format(date.today()),
+          file=file)
+##    print('<!-- {} -->'.format((xmin, xmax, ymin, ymax)))
 
     # Style the map.
-    print('<defs>')
-    print('<marker id="arrow" orient="auto" viewBox="-1 -2 4 4"')
-    print('        markerWidth="8" markerHeight="8">')
+    print('<defs>', file=file)
+    print('<marker id="arrow" orient="auto" viewBox="-1 -2 4 4"', file=file)
+    print('        markerWidth="8" markerHeight="8">', file=file)
     print('    <path d="M 0,0 -1,-2 3,0 -1,2 Z" '
-          'fill="{}"/>'.format(jump_colour))
-    print('</marker>')
-    print('<style type="text/css"><![CDATA[')
+          'fill="{}"/>'.format(jump_colour), file=file)
+    print('</marker>', file=file)
+    print('<style type="text/css"><![CDATA[', file=file)
     print('    g#jumps > path {{stroke: {}; '
-          'stroke-width: 1}}'.format(jump_colour))
-    print('    g#jumps > path.oneway {stroke-dasharray: 2,1;')
-    print('                           marker-mid: url(#arrow)}')
+          'stroke-width: 1}}'.format(jump_colour), file=file)
+    print('    g#jumps > path.oneway {stroke-dasharray: 2,1;', file=file)
+    print('                           marker-mid: url(#arrow)}', file=file)
     print('    g#systems > circle {{stroke: none; '
-          'fill: {}}}'.format(ssystem_colour))
+          'fill: {}}}'.format(ssystem_colour), file=file)
     print('    g#systems > text {{stroke: none; '
-          'fill: {}; font-family: {}}}'.format(label_colour, label_font))
-    print(']]></style>')
-    print('</defs>')
-    print()
+          'fill: {}; font-family: {}}}'.format(label_colour, label_font),
+          file=file)
+    print(']]></style>', file=file)
+    print('</defs>', file=file)
+    print(file=file)
 
     # Output the jumps first, so they're underneath the system markers.
-    print('<g id="jumps">')
+    print('<g id="jumps">', file=file)
     for jump in jumps:
         print('    <path d="M{},{} {},{}"/>'.format(jump[0].x, -jump[0].y,
-                                                    jump[1].x, -jump[1].y))
+                                                    jump[1].x, -jump[1].y),
+              file=file)
     for jump in jumps_oneway:
-        print('    <path class="oneway"')
+        print('    <path class="oneway"', file=file)
         print('          d="M{0},{1} l{2},{3} {2},{3}"'
               '/>'.format(jump[0].x,
                           -jump[0].y,
                           (jump[1].x - jump[0].x) // 2,
-                          -(jump[1].y - jump[0].y) // 2))
-    print('</g>')
-    print()
+                          -(jump[1].y - jump[0].y) // 2),
+              file=file)
+    print('</g>', file=file)
+    print(file=file)
 
     # Output the system markers.
-    print('<g id="systems">')
+    print('<g id="systems">', file=file)
     for name in systems:
         x, y = systems[name].coords
-        print('    <circle cx="{}" cy="{}" r="{}"/>'.format(x, -y, sys_size))
-        
+        print('    <circle cx="{}" cy="{}" r="{}"/>'.format(x, -y, sys_size),
+              file=file)
         print('    <text x="{}" y="{}" font-size="{}"'.format(x + 2 * sys_size,
                                                               -y + sys_size,
-                                                              3 * sys_size))
-        print('    >{}</text>'.format(name))
-    print('</g>')
-    print()
+                                                              3 * sys_size),
+              file=file)
+        print('    >{}</text>'.format(name), file=file)
+    print('</g>', file=file)
+    print(file=file)
 
     # And we're done!
-    print('</svg>')
+    print('</svg>', file=file)
 
 def main():
+    '''Generate an SVG map and print it to standard output.
+
+    The data files are assumed to be in ./dat/ssys/, relative to the
+    current path, so this should be run from the root of the Naev
+    source directory.
+
+    '''
     ssys_dir = os.path.join(os.curdir, 'dat', 'ssys')
 
     if not os.path.exists(ssys_dir):
-        raise IOError('could not find directory dat/ssys/ (run this from the '
-                      'root of your Naev source directory)')
+        raise IOError('could not find directory ./dat/ssys/ (run this from '
+                      'the root of your Naev source directory)')
 
     ssystems = []
     for ssysfile in glob.glob(os.path.join(ssys_dir, '*.xml')):
