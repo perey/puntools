@@ -188,6 +188,7 @@ class Asset:
             space, "exterior" for a panorama of the planet or station
             upon landing).
         hide -- A numeric value controlling the asset's visibility.
+        name -- The name of the asset.
         population -- The population of the asset.
         pos -- The location of the asset. An instance of Coords.
         presence -- The faction that holds this asset. An instance of
@@ -226,13 +227,16 @@ class Asset:
             with open(filename) as f:
                 # Grab the elements we want.
                 doc = xml.dom.minidom.parse(f)
-                # Don't index any of these NodeLists yet (they may not exist).
+                # Don't try and index into any of these NodeLists yet (they
+                # may not exist).
                 general = doc.getElementsByTagName('general')
                 gfx = doc.getElementsByTagName('GFX')
                 pos = doc.getElementsByTagName('pos')
                 presence = doc.getElementsByTagName('presence')
                 techs = doc.getElementsByTagName('tech')
                 virtual = doc.getElementsByTagName('virtual')
+
+                self.name = doc.documentElement.getAttribute('name')
 
                 # Set the asset's position, graphics, and virtual-ness.
                 self.pos = (Coords() if not pos else Coords(pos[0]))
@@ -330,6 +334,8 @@ class SSystem:
 
     Instance attributes:
         assets -- A set of Asset instances present in this system.
+            TODO: Actually, at the moment this is just a set of asset
+            names, not instances.
         interference -- The prevailing sensor interference from any
             background radiation or nebula presence in this system.
         jumps -- A mapping object pairing destination system names with
@@ -343,7 +349,8 @@ class SSystem:
         radius -- The size of this system for the purposes of asset
             placement, autopositioning jump points, and the in-game map.
         stars -- The density of stars in this system's background.
-            TODO: Check this! It's just a guess.
+            TODO: Check this! It's just my guess as to what this value
+            is supposed to represent.
 
     '''
     def __init__(self, filename=None):
