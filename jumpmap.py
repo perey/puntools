@@ -26,12 +26,11 @@ output. Example usage:
 
 # Standard library imports.
 from datetime import date
-import glob
-import os
 import sys
 
 # Local imports.
 from naevdata import SSystem
+from dataloader import datafiles
 
 def mapdata(ssystems):
     '''Extract mappable data from a list of star systems.
@@ -184,14 +183,8 @@ def main():
     source directory.
 
     '''
-    ssys_dir = os.path.join(os.curdir, 'dat', 'ssys')
-
-    if not os.path.exists(ssys_dir):
-        raise IOError('could not find directory ./dat/ssys/ (run this from '
-                      'the root of your Naev source directory)')
-
     ssystems = []
-    for ssysfile in glob.glob(os.path.join(ssys_dir, '*.xml')):
+    for ssysfile in datafiles('SSystems'):
         # Parse each XML file into a SSystem object.
         ssystems.append(SSystem(ssysfile))
     makemap(ssystems)
