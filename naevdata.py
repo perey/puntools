@@ -50,8 +50,8 @@ class Coords:
         if x is not None and y is None:
             # Just the one argument. Treat it as an XML element with <x> and
             # <y> children whose contents are the respective coordinates.
-            self.x = nodetext(x.getElementsByTagName('x')[0])
-            self.y = nodetext(x.getElementsByTagName('y')[0])
+            self.x = float(nodetext(x.getElementsByTagName('x')[0]))
+            self.y = float(nodetext(x.getElementsByTagName('y')[0]))
         else:
             # Both arguments, or neither.
             self.x = x if x is None else float(x)
