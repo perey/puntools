@@ -170,7 +170,7 @@ def assetdesc(asset, systems, out):
     print('<h2>(' + ('None' if len(systems) == 0 else
                      'Common' if len(systems) > 1 else
                      '<a href="../ssys/{0}.html">{0}</a>'.format(systems[0])) +
-          ')</h2>', file=out)
+          ')</h2>\n</hgroup>', file=out)
 
     if asset.description:
         print('<p>{0.description}</p>'.format(asset), file=out)
