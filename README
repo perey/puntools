@@ -4,6 +4,7 @@ codebase <https://github.com/bobbens/naev>. So far they include:
 * atlas.py:      Create a set of HTML files describing locations and systems.
 * dataranges.py: Get statistics on the ranges of values in the data files.
 * jumpmap.py:    Create an SVG map of all star systems and jumps between them.
+* naevdb.py:     Compile the data files into an SQLite database.
 
 All tools are licensed under the GNU General Public License; see individual
-source files for specifics.
+source files for the specific copyright information.
