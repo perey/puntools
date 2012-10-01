@@ -219,6 +219,54 @@ def get_asset_id(conn, asset, is_virtual=None):
     row = cur.fetchone()
     return (None if row is None else row[0])
 
+def _get_ssys_extras(conn, ssys, ssys_id):
+    '''Get star system data from outside the SSystems table.'''
+    # Get the system jump data.
+    cur = conn.cursor()
+    cur.execute('''SELECT
+                     s.SSysName
+                   , j.JumpPosX, j.JumpPosY, j.JumpHide, j.JumpIsExitOnly
+                   FROM
+                     SSystems s JOIN
+                     Jumps j ON s.SSysID = j.JumpToID
+                   WHERE j.JumpFromID = ?''', (ssys_id,))
+    for row in cur:
+        ssys.jumps[row[0]] = Jump((row[1], row[2]), row[3], row[4])
+
+    # Get the system asset data.
+    cur.execute('SELECT AssetName FROM Assets WHERE SSysID = ?', (ssys_id,))
+    for row in cur:
+        ssys.assets.add(row[0])
+    cur.execute('''SELECT v.VAssetName
+                   FROM VirtualAssets v JOIN
+                        SSysVAssets sv ON v.VAssetID = sv.VAssetID
+                   WHERE sv.SSysID = ?''', (ssys_id,))
+    for row in cur:
+        ssys.assets.add(row[0])
+
+def get_ssystems(conn):
+    '''Get all star systems from an open database.'''
+    ssystems = []
+    cur = conn.cursor()
+    cur.execute('''SELECT
+                     SSysID, SSysPosX, SSysPosY, SSysRadius, SSysStars
+                   , SSysInterference, SSysNebulaDensity, SSysNebulaVolatility
+                   FROM SSystems''')
+    for row in cur:
+        ssys = SSystem()
+        ssys.pos.x, ssys.pos.y = row['SSysPosX'], row['SSysPosY']
+        ssys.radius, ssys.stars = row['SSysRadius'], row['SSysStars']
+        ssys.interference = row['SSysInterference']
+        ssys.nebula.density = row['SSysNebulaDensity']
+        ssys.nebula.volatility = row['SSysNebulaDensity']
+
+        ssys_id = row['SSysID']
+        _get_ssys_extras(conn, ssys, ssys_id)
+
+        ssystems.append(ssys)
+
+    return ssystems
+
 def get_ssys(conn, name):
     '''Get the named star system from an open database.'''
     ssys = SSystem()
@@ -243,27 +291,7 @@ def get_ssys(conn, name):
         ssys.nebula.density = row['SSysNebulaDensity']
         ssys.nebula.volatility = row['SSysNebulaDensity']
 
-    # Get the system jump data.
-    cur.execute('''SELECT
-                     s.SSysName
-                   , j.JumpPosX, j.JumpPosY, j.JumpHide, j.JumpIsExitOnly
-                   FROM
-                     SSystems s JOIN
-                     Jumps j ON s.SSysID = j.JumpToID
-                   WHERE j.JumpFromID = ?''', (ssys_id,))
-    for row in cur:
-        ssys.jumps[row[0]] = Jump((row[1], row[2]), row[3], row[4])
-
-    # Get the system asset data.
-    cur.execute('SELECT AssetName FROM Assets WHERE SSysID = ?', (ssys_id,))
-    for row in cur:
-        ssys.assets.add(row[0])
-    cur.execute('''SELECT v.VAssetName
-                   FROM VirtualAssets v JOIN
-                        SSysVAssets sv ON v.VAssetID = sv.VAssetID
-                   WHERE sv.SSysID = ?''', (ssys_id,))
-    for row in cur:
-        ssys.assets.add(row[0])
+    _get_ssys_extras(conn, ssys, ssys_id)
 
     return ssys
 

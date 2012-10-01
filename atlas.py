@@ -2,10 +2,10 @@
 
 '''Universe atlas builder for Naev.
 
-Run this script from the root directory of your Naev source tree. It
-reads the XML files in dat/assets/ and dat/ssys/ and outputs a set of
-HTML files to an atlas/ subdirectory. Example usage:
-    user@home:~/naev/$ atlas
+Run this script with the name of a database file created by the script
+naevdb.py. It will read information from this database and output a set
+of HTML files to an atlas/ subdirectory. Example usage:
+    user@home:~/naev/$ atlas naev.db
 
 '''
 
@@ -25,13 +25,13 @@ HTML files to an atlas/ subdirectory. Example usage:
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Standard library imports.
-from datetime import date
+from datetime import date, fromtimestamp
 import os
+import sqlite3 as db
+import sys
 
 # Local imports.
-from naevdata import SSystem, Asset
-from dataloader import datafiles
-from jumpmap import mapdata
+import naevdb
 
 def scale_term(val, terms):
     '''Describe the relative scale or magnitude of a value.
@@ -207,13 +207,22 @@ def assetdesc(asset, systems, out):
     # Finish the HTML output.
     print('</body>\n</html>', file=out)
 
-def main():
-    '''Generate an atlas of the Naev universe.
+def make_index(out):
+    '''Write the main HTML page to an output file.
 
-    The data files are assumed to be in ./dat/, relative to the current
-    path, so this should be run from the root of the Naev source tree.
+    Keyword arguments:
+        out -- A file or file-like object, already opened for writing.
 
     '''
+    # Start the HTML output.
+    print('''<!DOCTYPE html>
+<html lang="en">''', file=out)
+
+    # Set metadata.
+    print('<head>\n<title>Naev Atlas</title>\n</head>')
+
+def main(dbfile):
+    '''Generate an atlas of the Naev universe.'''
     atlasdir = os.path.join(os.curdir, 'atlas')
     ssysdir = os.path.join(atlasdir, 'ssys')
     assetdir = os.path.join(atlasdir, 'assets')
@@ -223,10 +232,12 @@ def main():
     os.mkdir(ssysdir)
     os.mkdir(assetdir)
 
-    ssystems = []
-    for ssysfile in datafiles('SSystems'):
-        # Parse each XML file into a SSystem object.
-        ssystems.append(SSystem(ssysfile))
+    # Create the main page of the atlas.
+    with open(os.path.join(atlasdir, 'index.html'), 'w') as f:
+        make_index(f)
+
+    with db.connect(dbfile) as conn:
+        ssystems = naevdb.get_ssystems(conn)
 
     assets = {}
     for assetfile in datafiles('Assets'):
@@ -247,4 +258,13 @@ def main():
             assetdesc(asset, systems, f)
 
 if __name__ == '__main__':
-    main()
+    # Get the name of the database file.
+    try:
+        dbfile = sys.argv[1]
+    except IndexError:
+        # Default name.
+        dbfile = 'naev.db'
+    if not os.path.exists(dbfile):
+        raise IOError("database file '{}' does not exist".format(dbfile))
+
+    main(dbfile)
