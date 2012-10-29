@@ -186,7 +186,11 @@ def main():
     ssystems = []
     for ssysfile in datafiles('SSystems'):
         # Parse each XML file into a SSystem object.
-        ssystems.append(SSystem(ssysfile))
+        try:
+            ssystems.append(SSystem(ssysfile))
+        except:
+            print("Choked on '{}'".format(ssysfile), file=sys.stderr)
+            raise
     makemap(ssystems)
 
 if __name__ == '__main__':
