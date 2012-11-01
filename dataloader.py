@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 '''Naev data file loaders.
 
@@ -23,7 +24,11 @@ needs to be updated to match.
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Python 2 compatibility
+from __future__ import division, print_function, unicode_literals
+
 # Standard library imports.
+import subprocess
 import glob
 import os
 
@@ -34,6 +39,24 @@ DATA_ROOT = 'dat'
 # the directory and a filename pattern.
 DATA_LOCS = {'SSystems': ('ssys', '*.xml'),
              'Assets': ('assets', '*.xml')}
+
+def naev_version(naevroot=None):
+    '''Get the currently declared Naev version.'''
+    if naevroot is None:
+        naevroot = os.curdir
+    with open(os.path.join(naevroot, 'VERSION')) as v:
+        return v.read().strip()
+
+def naev_revision(naevroot=None):
+    '''Get the current Naev version control revision identifier.'''
+    if naevroot is not None:
+        oldwd = os.getcwd()
+        os.chdir(naevroot)
+    revision = subprocess.check_output(('git', 'rev-parse', '--short',
+                                        '--verify', 'HEAD')).decode()
+    if naevroot is not None:
+        os.chdir(oldwd)
+    return revision
 
 def datafiles(dataset, naevroot=None):
     '''Provide an iterator to run through data files.

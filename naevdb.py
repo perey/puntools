@@ -19,12 +19,13 @@
 
 # Standard library imports.
 from collections import defaultdict
+from datetime import datetime, timezone
 import os
 import sqlite3 as db
 import sys
 
 # Local imports.
-from dataloader import datafiles
+from dataloader import datafiles, naev_version, naev_revision
 from naevdata import Asset, Jump, SSystem
 
 def adapt_boolean(boolean):
@@ -40,6 +41,12 @@ db.register_converter('BOOLEAN', convert_boolean)
 def make_db(conn):
     '''Create an empty database.'''
     cur = conn.cursor()
+    cur.execute('''CREATE TABLE Metadata (
+                     MetadataID INTEGER PRIMARY KEY AUTOINCREMENT
+                   , NaevVersion TEXT
+                   , GitRevision TEXT
+                   , DateGenerated date
+                   )''')
     cur.execute('''CREATE TABLE SSystems (
                      SSysID INTEGER PRIMARY KEY AUTOINCREMENT
                    , SSysName TEXT NOT NULL
@@ -322,6 +329,24 @@ def get_ssys_presence(conn, name):
 
     return presences
 
+def set_metadata(conn, version, revision):
+    '''Set the metadata in an open database.'''
+    cur = conn.cursor()
+    cur.execute('''INSERT INTO Metadata (
+                     NaevVersion, GitRevision, DateGenerated
+                   ) VALUES (
+                     ?, ?, ?
+                   )''', (version, revision, datetime.now(timezone.utc)))
+
+def get_metadata(conn):
+    '''Get the metadata from an open database.'''
+    cur = conn.cursor()
+    cur.execute('''SELECT NaevVersion, GitRevision, DateGenerated
+                   FROM Metadata
+                   ORDER BY MetadataID DESC''')
+    row = cur.fetchone()
+    return (row['NaevVersion'], row['GitRevision'], row['DateGenerated'])
+
 def build_db(filename):
     '''Create and populate the Naev database.'''
     with db.connect(filename) as conn:
@@ -369,6 +394,9 @@ def build_db(filename):
                     continue
                 if this_asset.virtual:
                     store_vasset_location(conn, ssys, this_asset)
+
+        # Finally, store the metadata regarding the data sources.
+        set_metadata(conn, naev_version(), naev_revision())
 
 if __name__ == '__main__':
     # Create the database at the location given on the command line.

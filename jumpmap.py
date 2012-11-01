@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 '''Universe mapping tool for Naev.
 
@@ -23,6 +24,9 @@ output. Example usage:
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Python 2 compatibility
+from __future__ import division, print_function, unicode_literals
 
 # Standard library imports.
 from datetime import date

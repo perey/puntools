@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 '''Naev data file tools.'''
 
@@ -17,13 +18,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Python 2 compatibility
+from __future__ import division, print_function, unicode_literals
+
+# Standard library imports.
 import xml.dom.minidom
 
 # Shortcut function to extract the text content from an element.
 nodetext = lambda elem: ''.join(c.data for c in elem.childNodes
                                 if c.nodeType == c.TEXT_NODE)
 
-class Coords:
+class Coords(object):
     '''Represents an x-y coordinate pair.
 
     Instance attributes:
@@ -82,12 +87,12 @@ class Jump(Coords):
             dest -- This argument is not used and may be omitted.
 
         '''
-        super().__init__(*pos)
+        super(Jump, self).__init__(*pos)
         self.hide = float(hide)
         self.exit_only = bool(exit_only)
 
 
-class Nebula:
+class Nebula(object):
     '''Represents the nebula presence in a star system.
 
     Instance attributes:
@@ -107,7 +112,7 @@ class Nebula:
         self.volatility = float(volatility)
 
 
-class Presence:
+class Presence(object):
     '''Represents the faction holding a planet, station, or other asset.
 
     Instance attributes:
@@ -132,7 +137,7 @@ class Presence:
         self.range = int(range_)
 
 
-class Services:
+class Services(object):
     '''Represents the services available on a planet or station.
 
     Instance attributes:
@@ -172,7 +177,7 @@ class Services:
         self.shipyard = bool(shipyard)
 
 
-class Asset:
+class Asset(object):
     '''Represents a planet, moon, station, or virtual holding.
 
     A "virtual" asset represents a faction's stake in a system without
@@ -329,7 +334,7 @@ class Asset:
                         self.services.commodities = commodities
 
 
-class SSystem:
+class SSystem(object):
     '''Represents a star system.
 
     Instance attributes:
